@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>三角函數大挑戰 📐</title>
+    <style>
+        /* 整體網頁背景與置中 */
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #e0f2fe, #ccfbf1);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        /* 遊戲主視窗 */
+        #quiz-container {
+            background-color: white;
+            padding: 30px;
+            border-radius: 16px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 450px;
+            text-align: center;
+        }
+        h1 {
+            color: #0369a1;
+            margin-bottom: 20px;
+            font-size: 26px;
+        }
+        /* 題目顯示區域 */
+        #question {
+            font-size: 22px;
+            font-weight: bold;
+            margin-bottom: 25px;
+            color: #334155;
+            min-height: 40px;
+        }
+        /* 四個選項的 2x2 網格佈局 */
+        .btn-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+        /* 選項按鈕樣式 */
+        button {
+            background-color: #f8fafc;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 14px;
+            font-size: 18px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            color: #334155;
+        }
+        /* 滑鼠懸停效果 */
+        button:hover:not(:disabled) {
+            background-color: #38bdf8;
+            color: white;
+            border-color: #38bdf8;
+            transform: translateY(-2px);
+        }
+        button:disabled {
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+        /* 計分板 */
+        #score-board {
+            margin-top: 20px;
+            font-size: 16px;
+            color: #64748b;
+            border-top: 1px solid #f1f5f9;
+            padding-top: 15px;
+        }
+        /* 回饋訊息（正確/錯誤） */
+        #feedback {
+            margin-top: 15px;
+            font-size: 18px;
+            font-weight: bold;
+            height: 28px;
+        }
+        .correct { color: #22c55e; }
+        .wrong { color: #ef4444; }
+        /* 重來按鈕 */
+        #restart-btn {
+            background-color: #0ea5e9;
+            color: white;
+            border: none;
+            width: 100%;
+            margin-top: 20px;
+            padding: 12px;
+            border-radius: 10px;
+            font-size: 18px;
+            font-weight: bold;
+            display: none;
+            cursor: pointer;
+        }
+        #restart-btn:hover {
+            background-color: #0284c7;
+        }
+    </style>
+</head>
+<body>
+
+<div id="quiz-container">
+    <h1>📐 三角函數大挑戰</h1>
+    <div id="quiz-content">
+        <div id="question">載入中...</div>
+        <div class="btn-container" id="options-container">
+            </div>
+        <div id="feedback"></div>
+        <div id="score-board">目前分數: <span id="score">0</span> / <span id="total">0</span></div>
+    </div>
+    <button id="restart-btn" onclick="restartGame()">再玩一次 🔄</button>
+</div>
+
+<script>
+    // 題庫設定：你可以自由增減裡面的題目！
+    const questions = [
+        { q: "sin(30°)", options: ["1/2", "√3/2", "1", "0"], answer: "1/2" },
+        { q: "cos(60°)", options: ["1/2", "√3/2", "√2/2", "0"], answer: "1/2" },
+        { q: "tan(45°)", options: ["0", "1/2", "1", "√3"], answer: "1" },
+        { q: "sin(90°)", options: ["0", "1", "-1", "無限大"], answer: "1" },
+        { q: "cos(180°)", options: ["1", "0", "-1", "無解"], answer: "-1" },
+        { q: "tan(60°)", options: ["1/√3", "1", "√3", "2"], answer: "√3" },
+        { q: "sin(0°)", options: ["0", "1", "1/2", "-1"], answer: "0" }
+    ];
+
+    let currentQuestionIndex = 0;
+    let score = 0;
+
+    // 取得 DOM 元素
+    const questionEl = document.getElementById("question");
+    const optionsContainer = document.getElementById("options-container");
+    const feedbackEl = document.getElementById("feedback");
+    const scoreEl = document.getElementById("score");
+    const totalEl = document.getElementById("total");
+    const restartBtn = document.getElementById("restart-btn");
+
+    // 載入題目函式
+    function loadQuestion() {
+        feedbackEl.innerText = "";
+        feedbackEl.className = "";
+        
+        // 檢查是否答完全部題目
+        if (currentQuestionIndex >= questions.length) {
+            showResults();
+            return;
+        }
+
+        const currentQuestion = questions[currentQuestionIndex];
+        questionEl.innerText = `請問 ${currentQuestion.q} 的值是多少？`;
+        optionsContainer.innerHTML = "";
+
+        // 渲染選項按鈕
+        currentQuestion.options.forEach(option => {
+            const btn = document.createElement("button");
+            btn.innerText = option;
+            btn.onclick = () => checkAnswer(option, currentQuestion.answer);
+            optionsContainer.appendChild(btn);
+        });
+
+        totalEl.innerText = questions.length;
+        scoreEl.innerText = score;
+    }
+
+    // 檢查答案
+    function checkAnswer(selected, correct) {
+        // 暫時禁用所有按鈕，防止連續點擊
+        const buttons = optionsContainer.querySelectorAll("button");
+        buttons.forEach(btn => btn.disabled = true);
+
+        if (selected === correct) {
+            feedbackEl.innerText = "🎉 答對了！太強了！";
+            feedbackEl.className = "correct";
+            score++;
+            scoreEl.innerText = score;
+        } else {
+            feedbackEl.innerText = `❌ 答錯囉！答案是 ${correct}`;
+            feedbackEl.className = "wrong";
+        }
+
+        // 延遲 1.5 秒後自動進入下一題
+        setTimeout(() => {
+            currentQuestionIndex++;
+            loadQuestion();
+        }, 1500);
+    }
+
+    // 顯示最終結果
+    function showResults() {
+        questionEl.innerText = " 測驗結束！";
+        optionsContainer.innerHTML = "";
+        feedbackEl.innerText = `最終得分：${score} / ${questions.length}`;
+        feedbackEl.className = "";
+        restartBtn.style.display = "block";
+    }
+
+    // 重新開始遊戲
+    function restartGame() {
+        currentQuestionIndex = 0;
+        score = 0;
+        restartBtn.style.display = "none";
+        loadQuestion();
+    }
+
+    // 啟動遊戲
+    loadQuestion();
+</script>
+
+</body>
+</html>
